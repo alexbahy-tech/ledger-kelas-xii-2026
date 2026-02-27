@@ -1,0 +1,24 @@
+# Clasp credentials (JANGAN di-commit!)
+.clasprc.json
+
+# Node modules
+node_modules/
+
+# Environment / secret files
+.env
+.env.*
+secrets.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*

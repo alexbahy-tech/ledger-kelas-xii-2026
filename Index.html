@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Ledger Nilai XII</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <?!= include('Style'); ?>
+</head>
+<body data-theme="light">
+
+  <!-- ══════════════════════════════════════════════════════════
+       LOADING SCREEN — tampil saat fetch data awal
+  ════════════════════════════════════════════════════════════ -->
+  <div id="appLoader" class="app-loader">
+    <div class="loader-inner">
+      <div class="loader-logo">
+        <span class="material-icons-round">school</span>
+      </div>
+      <div class="loader-ring"></div>
+      <p class="loader-text">Memuat data akademik...</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       TOAST NOTIFICATION CONTAINER
+  ════════════════════════════════════════════════════════════ -->
+  <div id="toastContainer" class="toast-container" role="alert" aria-live="polite"></div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MAIN APP SHELL
+  ════════════════════════════════════════════════════════════ -->
+  <div id="appShell" class="app-shell hidden">
+
+    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon"><span class="material-icons-round">school</span></div>
+          <div class="brand-text">
+            <span class="brand-title">SMK Ledger</span>
+            <span class="brand-sub">Nilai Kelas XII</span>
+          </div>
+        </div>
+        <button id="sidebarToggle" class="sidebar-toggle" title="Tutup sidebar">
+          <span class="material-icons-round">menu_open</span>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li class="nav-section-label">MENU UTAMA</li>
+          <li>
+            <a href="#" class="nav-item active" data-view="dashboard">
+              <span class="material-icons-round">dashboard</span>
+              <span class="nav-label">Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-item" data-view="data-siswa">
+              <span class="material-icons-round">people</span>
+              <span class="nav-label">Data Siswa</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-item" data-view="nilai-semester">
+              <span class="material-icons-round">grade</span>
+              <span class="nav-label">Nilai Semester</span>
+            </a>
+          </li>
+
+          <li class="nav-section-label">LAPORAN</li>
+          <li>
+            <a href="#" class="nav-item" data-view="rekap-prodi">
+              <span class="material-icons-round">bar_chart</span>
+              <span class="nav-label">Rekap per Prodi</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-item" data-view="audit-log">
+              <span class="material-icons-round">history</span>
+              <span class="nav-label">Audit Log</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="darkModeToggle" class="btn-icon-text" title="Toggle dark mode">
+          <span class="material-icons-round" id="darkModeIcon">dark_mode</span>
+          <span id="darkModeLabel">Mode Gelap</span>
+        </button>
+        <button id="refreshDataBtn" class="btn-icon-text" title="Refresh data dari spreadsheet">
+          <span class="material-icons-round">sync</span>
+          <span>Refresh Data</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── MAIN CONTENT ──────────────────────────────────────── -->
+    <div class="main-content" id="mainContent">
+
+      <!-- TOP NAVBAR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebarOpen" class="btn-icon hidden" title="Buka sidebar">
+            <span class="material-icons-round">menu</span>
+          </button>
+          <div class="breadcrumb">
+            <span id="breadcrumbText">Dashboard</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="search-global">
+            <span class="material-icons-round">search</span>
+            <input type="text" id="globalSearch" placeholder="Cari nama siswa, NIS, kelas..." autocomplete="off">
+          </div>
+          <button id="addSiswaBtn" class="btn-primary" onclick="App.openModal('add')">
+            <span class="material-icons-round">person_add</span>
+            <span>Tambah Siswa</span>
+          </button>
+          <button class="btn-icon" onclick="App.exportExcel()" title="Export Excel">
+            <span class="material-icons-round">table_view</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ── VIEW: DASHBOARD ──────────────────────────────── -->
+      <section id="view-dashboard" class="view active">
+        <div class="view-header">
+          <h1>Dashboard Akademik</h1>
+          <p>Ringkasan data ledger nilai siswa kelas XII</p>
+        </div>
+
+        <!-- STAT CARDS -->
+        <div class="stat-grid" id="statCards">
+          <div class="stat-card stat-blue">
+            <div class="stat-icon"><span class="material-icons-round">people</span></div>
+            <div class="stat-body">
+              <span class="stat-value" id="statTotalSiswa">—</span>
+              <span class="stat-label">Total Siswa</span>
+            </div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-icon"><span class="material-icons-round">work</span></div>
+            <div class="stat-body">
+              <span class="stat-value" id="statTotalProdi">—</span>
+              <span class="stat-label">Program Keahlian</span>
+            </div>
+          </div>
+          <div class="stat-card stat-orange">
+            <div class="stat-icon"><span class="material-icons-round">class</span></div>
+            <div class="stat-body">
+              <span class="stat-value" id="statTotalKelas">—</span>
+              <span class="stat-label">Total Kelas</span>
+            </div>
+          </div>
+          <div class="stat-card stat-purple">
+            <div class="stat-icon"><span class="material-icons-round">calendar_today</span></div>
+            <div class="stat-body">
+              <span class="stat-value">6</span>
+              <span class="stat-label">Semester Direkam</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PRODI BREAKDOWN + KELAS BREAKDOWN -->
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3><span class="material-icons-round">donut_large</span> Siswa per Program Keahlian</h3>
+            </div>
+            <div class="card-body">
+              <div id="prodiBreakdown" class="breakdown-list"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3><span class="material-icons-round">class</span> Distribusi per Kelas</h3>
+            </div>
+            <div class="card-body">
+              <div id="kelasBreakdown" class="breakdown-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW: DATA SISWA ──────────────────────────────── -->
+      <section id="view-data-siswa" class="view">
+        <div class="view-header">
+          <h1>Data Siswa</h1>
+          <p>Manajemen data identitas siswa kelas XII</p>
+        </div>
+
+        <!-- TOOLBAR TABEL -->
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <div class="search-box">
+              <span class="material-icons-round">search</span>
+              <input type="text" id="tableSearch" placeholder="Cari siswa..." oninput="Table.onSearch(this.value)">
+            </div>
+            <div class="filter-group">
+              <select id="filterKelas" onchange="Table.onFilterKelas(this.value)" class="select-filter">
+                <option value="">Semua Kelas</option>
+              </select>
+              <select id="filterProdi" onchange="Table.onFilterProdi(this.value)" class="select-filter">
+                <option value="">Semua Prodi</option>
+              </select>
+            </div>
+          </div>
+          <div class="toolbar-right">
+            <span id="rowCountBadge" class="badge-count">0 data</span>
+            <button class="btn-outline" onclick="Table.clearFilters()">
+              <span class="material-icons-round">filter_alt_off</span> Reset Filter
+            </button>
+          </div>
+        </div>
+
+        <!-- DATA TABLE -->
+        <div class="card table-card">
+          <div class="table-wrapper">
+            <table id="dataSiswaTable" class="data-table">
+              <thead>
+                <tr>
+                  <th class="th-no">No</th>
+                  <th class="sortable" data-col="nis" onclick="Table.sortBy('nis')">NIS <span class="sort-icon material-icons-round">unfold_more</span></th>
+                  <th>NISN</th>
+                  <th class="sortable" data-col="nama" onclick="Table.sortBy('nama')">Nama Siswa <span class="sort-icon material-icons-round">unfold_more</span></th>
+                  <th class="sortable" data-col="prodi" onclick="Table.sortBy('prodi')">Program Keahlian <span class="sort-icon material-icons-round">unfold_more</span></th>
+                  <th class="sortable" data-col="kelas" onclick="Table.sortBy('kelas')">Kelas <span class="sort-icon material-icons-round">unfold_more</span></th>
+                  <th class="th-aksi">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <tr><td colspan="7" class="table-empty">
+                  <span class="material-icons-round">hourglass_empty</span>
+                  <p>Memuat data...</p>
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- PAGINATION -->
+          <div class="pagination" id="pagination">
+            <button id="prevPage" class="btn-icon" onclick="Table.prevPage()" disabled>
+              <span class="material-icons-round">chevron_left</span>
+            </button>
+            <div id="pageNumbers" class="page-numbers"></div>
+            <button id="nextPage" class="btn-icon" onclick="Table.nextPage()" disabled>
+              <span class="material-icons-round">chevron_right</span>
+            </button>
+            <span class="pagination-info" id="paginationInfo"></span>
+            <select class="select-per-page" id="perPageSelect" onchange="Table.setPerPage(this.value)">
+              <option value="10">10/hal</option>
+              <option value="25" selected>25/hal</option>
+              <option value="50">50/hal</option>
+              <option value="100">100/hal</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW: NILAI SEMESTER ──────────────────────────── -->
+      <section id="view-nilai-semester" class="view">
+        <div class="view-header">
+          <h1>Nilai Semester</h1>
+          <p>Detail nilai per semester untuk setiap siswa</p>
+        </div>
+        <div class="nilai-controls card">
+          <div class="nilai-controls-inner">
+            <div class="form-group inline">
+              <label>Filter Kelas</label>
+              <select id="nilaiFilterKelas" class="select-filter" onchange="Nilai.onFilterChange()">
+                <option value="">Semua Kelas</option>
+              </select>
+            </div>
+            <div class="form-group inline">
+              <label>Pilih Semester</label>
+              <select id="nilaiSemester" class="select-filter" onchange="Nilai.onFilterChange()">
+                <option value="1">Semester 1</option>
+                <option value="2">Semester 2</option>
+                <option value="3">Semester 3</option>
+                <option value="4">Semester 4</option>
+                <option value="5">Semester 5</option>
+                <option value="6">Semester 6</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card table-card" id="nilaiTableCard">
+          <div class="table-wrapper" id="nilaiTableWrapper">
+            <p class="table-empty"><span class="material-icons-round">info</span><span>Pilih kelas untuk menampilkan nilai.</span></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW: REKAP PRODI ─────────────────────────────── -->
+      <section id="view-rekap-prodi" class="view">
+        <div class="view-header">
+          <h1>Rekap per Program Keahlian</h1>
+          <p>Ringkasan jumlah siswa dan distribusi kelas per program keahlian</p>
+        </div>
+        <div id="rekapProdiContent" class="rekap-grid"></div>
+      </section>
+
+      <!-- ── VIEW: AUDIT LOG ──────────────────────────────── -->
+      <section id="view-audit-log" class="view">
+        <div class="view-header">
+          <h1>Audit Log</h1>
+          <p>Riwayat 50 perubahan data terakhir</p>
+        </div>
+        <div class="card table-card">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Waktu</th>
+                  <th>Aksi</th>
+                  <th>Baris</th>
+                  <th>Pengguna</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody id="auditLogBody">
+                <tr><td colspan="5" class="table-empty"><span class="material-icons-round">hourglass_empty</span><p>Memuat log...</p></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /main-content -->
+  </div><!-- /app-shell -->
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       MODAL: TAMBAH / EDIT SISWA
+  ════════════════════════════════════════════════════════════ -->
+  <div id="modalOverlay" class="modal-overlay hidden" onclick="App.closeModalOutside(event)">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h2 id="modalTitle">Tambah Siswa Baru</h2>
+        <button class="modal-close" onclick="App.closeModal()" aria-label="Tutup">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form id="siswaForm" onsubmit="return false;" novalidate>
+          <input type="hidden" id="formRowIndex">
+          <input type="hidden" id="formNo">
+
+          <!-- IDENTITAS SISWA -->
+          <fieldset class="form-section">
+            <legend>Identitas Siswa</legend>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="formNIS">NIS <span class="required">*</span></label>
+                <input type="text" id="formNIS" placeholder="Nomor Induk Siswa" maxlength="10" required>
+                <span class="field-error" id="errNIS"></span>
+              </div>
+              <div class="form-group">
+                <label for="formNISN">NISN</label>
+                <input type="text" id="formNISN" placeholder="Nomor Induk Siswa Nasional" maxlength="15">
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label for="formNama">Nama Siswa <span class="required">*</span></label>
+              <input type="text" id="formNama" placeholder="Nama lengkap siswa" required>
+              <span class="field-error" id="errNama"></span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="formProdi">Program Keahlian <span class="required">*</span></label>
+                <select id="formProdi" onchange="Modal.onProdiChange(this.value)">
+                  <option value="">— Pilih Program Keahlian —</option>
+                  <option value="Akuntansi dan Keuangan Lembaga">Akuntansi dan Keuangan Lembaga</option>
+                  <option value="Pemasaran">Pemasaran</option>
+                  <option value="Manajemen Perkantoran dan Layanan Bisnis">Manajemen Perkantoran dan Layanan Bisnis</option>
+                  <option value="Teknik Jaringan Komputer dan Telekomunikasi">Teknik Jaringan Komputer dan Telekomunikasi</option>
+                  <option value="Teknik Ketenagalistrikan">Teknik Ketenagalistrikan</option>
+                  <option value="Usaha Layanan Pariwisata">Usaha Layanan Pariwisata</option>
+                </select>
+                <span class="field-error" id="errProdi"></span>
+              </div>
+              <div class="form-group">
+                <label for="formKelas">Kelas <span class="required">*</span></label>
+                <select id="formKelas" required>
+                  <option value="">— Pilih Kelas —</option>
+                  <option value="XIIAKL">XIIAKL</option>
+                  <option value="XIIPMS">XIIPMS</option>
+                  <option value="XIIMPLB">XIIMPLB</option>
+                  <option value="XIITJKT">XIITJKT</option>
+                  <option value="XIITK">XIITK</option>
+                  <option value="XIIULP">XIIULP</option>
+                </select>
+                <span class="field-error" id="errKelas"></span>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- TAB NILAI SEMESTER -->
+          <fieldset class="form-section">
+            <legend>Nilai Semester (opsional)</legend>
+            <div class="semester-tabs">
+              <button type="button" class="sem-tab active" data-sem="1" onclick="Modal.switchSemTab(1)">Sem. 1</button>
+              <button type="button" class="sem-tab" data-sem="2" onclick="Modal.switchSemTab(2)">Sem. 2</button>
+              <button type="button" class="sem-tab" data-sem="3" onclick="Modal.switchSemTab(3)">Sem. 3</button>
+              <button type="button" class="sem-tab" data-sem="4" onclick="Modal.switchSemTab(4)">Sem. 4</button>
+              <button type="button" class="sem-tab" data-sem="5" onclick="Modal.switchSemTab(5)">Sem. 5</button>
+              <button type="button" class="sem-tab" data-sem="6" onclick="Modal.switchSemTab(6)">Sem. 6</button>
+            </div>
+            <div id="semesterFieldsContainer"></div>
+          </fieldset>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="App.closeModal()">Batal</button>
+        <button class="btn-primary" id="submitFormBtn" onclick="App.submitForm()">
+          <span class="material-icons-round">save</span>
+          <span id="submitBtnText">Simpan Data</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MODAL: KONFIRMASI HAPUS
+  ════════════════════════════════════════════════════════════ -->
+  <div id="confirmOverlay" class="modal-overlay hidden">
+    <div class="modal modal-confirm" role="dialog" aria-modal="true">
+      <div class="confirm-icon">
+        <span class="material-icons-round">warning_amber</span>
+      </div>
+      <h3 id="confirmTitle">Hapus Data Siswa?</h3>
+      <p id="confirmMessage">Data ini akan dihapus permanen dan tidak bisa dikembalikan.</p>
+      <div class="confirm-actions">
+        <button class="btn-ghost" onclick="App.closeConfirm()">Batal</button>
+        <button class="btn-danger" id="confirmOkBtn">
+          <span class="material-icons-round">delete_forever</span> Ya, Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MODAL: DETAIL NILAI SISWA
+  ════════════════════════════════════════════════════════════ -->
+  <div id="detailOverlay" class="modal-overlay hidden" onclick="App.closeDetailOutside(event)">
+    <div class="modal modal-wide" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="detailTitle">Detail Nilai Siswa</h2>
+        <button class="modal-close" onclick="App.closeDetail()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="App.closeDetail()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('Script'); ?>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "smk-ledger-nilai",
+  "version": "2.0.1",
+  "description": "Sistem Manajemen Akademik SMK — Ledger Nilai Kelas XII",
+  "scripts": {
+    "login": "clasp login",
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "deploy": "clasp deploy",
+    "open": "clasp open",
+    "logs": "clasp logs"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}
